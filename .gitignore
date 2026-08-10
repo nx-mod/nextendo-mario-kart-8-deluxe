@@ -5,7 +5,7 @@
 /bin/
 /dist/
 
-# Raw / captured binary data
+# Raw / measured binary data
 *.bin
 
 # Secrets & local config — NEVER commit these
