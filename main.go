@@ -1,6 +1,6 @@
 // Command mk8 runs the Mario Kart 8 Deluxe online servers (auth + secure) on the
-// Nextendo NEX stack — our own closed-source NEX implementation, with 
-// the previous stack code. It is the online server
+// Nextendo NEX stack — our own closed-source NEX implementation, with no third-party
+// AGPL code. It is the transition target for closing the public
 // servers built on the previous stack.
 //
 // Two NEX servers run in one process:
@@ -35,8 +35,8 @@ var (
 	nextendoHost = envOr("NEXTENDO_HOST", "127.0.0.1")
 	authPort     = envOrInt("AUTH_PORT", 443)
 	securePort   = envOrInt("SECURE_PORT", 60003)
-	certFile     = envOr("CERT_FILE", `cert.pem`)
-	keyFile      = envOr("KEY_FILE", `key.pem`)
+	certFile     = envOr("CERT_FILE", `C:\Dev\Dev\reverse eden\server\certs\local_server_cert.pem`)
+	keyFile      = envOr("KEY_FILE", `C:\Dev\Dev\reverse eden\server\certs\local_server_key.pem`)
 
 	// nextendoSecret signs "nx2." NEX login tokens issued by the account service. It
 	// MUST be byte-identical to nextendo-account's secret or token validation fails.
@@ -113,9 +113,9 @@ func main() {
 	secureEndpoint.StartReaper()
 	go startDashboard(secureEndpoint, mm)
 
-	// When the auth is fronted by a TLS-passthrough proxy (the reverse proxy on the shared :443),
+	// When the auth is fronted by a TLS-passthrough proxy (Traefik on the shared :443),
 	// enable PROXY protocol so the auth sees the console's REAL IP. Without it the login PID is
-	// remembered under the reverse proxy's internal IP (127.0.0.1), and MK8's TICKETLESS secure CONNECT —
+	// remembered under Traefik's internal IP (10.0.1.x), and MK8's TICKETLESS secure CONNECT —
 	// which arrives on the host-published :60003 with the real client IP — can't RecallAuthPID it,
 	// falling back to an incrementing placeholder PID (1800000001, 1800000002, ...) the console
 	// doesn't recognise as itself -> Pia self-recognition fails -> SessionKeepFailed / comm error.
@@ -227,10 +227,15 @@ func resolveUser(username string, extraData []byte) (uint64, []byte, bool) {
 	return anonymousPID(username), sourceKey, true
 }
 
-// revokedNexPayloads lists leaked nex_token payloads (pid.username.expiry) that must be
-// rejected even though their HMAC is valid, without rotating the shared secret. Populated
-// per deployment.
+// revokedNexPayloads liste les charges utiles de nex_token fuités ("pid.username.expiry") qui
+// DOIVENT être refusées bien que leur signature HMAC soit valide. Incident 2026-07-22 : la
+// release 1.6.5 Windows a été empaquetée depuis un dossier où le mainteneur s'était connecté,
+// donc portable/nextendo_account.txt (une session vivante) a été livré à chaque téléchargeur —
+// fuite de ce jeton exact vers toute la communauté. Le denylist tue le jeton partout où il est
+// présenté, sans faire tourner le secret partagé (ce qui déconnecterait tout le monde). À garder
+// synchronisé avec la liste identique dans nextendo-account et les autres serveurs de jeu.
 var revokedNexPayloads = map[string]bool{
+	"1800000006.Kazuu.1787343209": true, // fuite release 1.6.5-win (Kazuu / PID 1800000006)
 }
 // nextendoPIDFromToken validates a "nx2.<b64(pid.username.expiry)>.<b64(hmac)>"
 // token signed by the account service (HMAC-SHA256, "nex:" prefix).

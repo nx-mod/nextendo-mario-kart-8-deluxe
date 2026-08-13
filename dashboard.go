@@ -470,8 +470,8 @@ func buildStats(endpoint *nex.Endpoint, mm *nex.Matchmaking) apiStats {
 		PeakConnected:  peakConnected,
 		Server: apiServer{
 			AccessKey: accessKey, NexVersion: "4.0.0", AuthPort: fmt.Sprintf("%d", authPort),
-			SecurePort: securePort, SNIHost: "", SessionKey: sessionKeyLen,
-			Stack: "the online stack",
+			SecurePort: securePort, SNIHost: "g2b309e01-lp1.s.n.srv.nintendo.net", SessionKey: sessionKeyLen,
+			Stack: "closed-source (no AGPL)",
 		},
 		Players:    players,
 		Gatherings: gs,
